@@ -1,26 +1,9 @@
-/*******************************************************************************
- * Copyright (c) 2008 - 2012 The Khronos Group Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and/or associated documentation files (the
- * "Materials"), to deal in the Materials without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Materials, and to
- * permit persons to whom the Materials are furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
- *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
- ******************************************************************************/
- 
+//
+//                     SPIR Tools
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
  
 #ifndef _OPENCL_H_
 #define _OPENCL_H_
@@ -2285,7 +2268,7 @@ float4 const_func __attribute__((overloadable)) native_cos(float4 x);
 float8 const_func __attribute__((overloadable)) native_cos(float8 x);
 float16 const_func __attribute__((overloadable)) native_cos(float16 x);
 
-// EXTENSTION: native double
+// EXTENSION: native double
 double const_func __attribute__((overloadable)) native_cos(double x);
 double2 const_func __attribute__((overloadable)) native_cos(double2 x);
 double3 const_func __attribute__((overloadable)) native_cos(double3 x);
@@ -2304,7 +2287,7 @@ float4 const_func __attribute__((overloadable)) native_divide(float4 x, float4 y
 float8 const_func __attribute__((overloadable)) native_divide(float8 x, float8 y);
 float16 const_func __attribute__((overloadable)) native_divide(float16 x, float16 y);
 
-// EXTENSTION: native double
+// EXTENSION: native double
 double const_func __attribute__((overloadable)) native_divide(double x, double y);
 double2 const_func __attribute__((overloadable)) native_divide(double2 x, double2 y);
 double3 const_func __attribute__((overloadable)) native_divide(double3 x, double3 y);

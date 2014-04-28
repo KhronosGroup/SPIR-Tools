@@ -1,0 +1,3 @@
+add_subdirectory(spir_verifier)
+add_subdirectory(spir_name_mangler)
+add_subdirectory(unittest)
