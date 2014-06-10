@@ -199,13 +199,13 @@ namespace SPIR {
 
     /// @brief Returns the pointer's address space.
     /// @return pointer's address space.
-    const TypeAttributeEnum getAddressSpace() const;
+    TypeAttributeEnum getAddressSpace() const;
 
     /// @brief Adds or removes a pointer's qualifier.
     /// @param TypeAttributeEnum qual - qualifier to add/remove.
     /// @param bool enabled - true if qualifier should exist false otherwise.
     ///        default is set to false.
-    void PointerType::setQualifier(TypeAttributeEnum qual, bool enabled);
+    void setQualifier(TypeAttributeEnum qual, bool enabled);
 
     /// @brief Checks if the pointer has a certain qualifier.
     /// @param TypeAttributeEnum qual - qualifier to check.
