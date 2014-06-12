@@ -61,7 +61,7 @@ namespace SPIR {
     m_address_space = attr;
   }
 
-  const TypeAttributeEnum PointerType::getAddressSpace() const {
+  TypeAttributeEnum PointerType::getAddressSpace() const {
     return m_address_space;
   }
 

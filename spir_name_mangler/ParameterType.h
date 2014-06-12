@@ -199,7 +199,7 @@ namespace SPIR {
 
     /// @brief Returns the pointer's address space.
     /// @return pointer's address space.
-    const TypeAttributeEnum getAddressSpace() const;
+    TypeAttributeEnum getAddressSpace() const;
 
     /// @brief Adds or removes a pointer's qualifier.
     /// @param TypeAttributeEnum qual - qualifier to add/remove.
