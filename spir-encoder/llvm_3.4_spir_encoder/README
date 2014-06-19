@@ -1,0 +1,26 @@
+spir-encoder
+------------
+This utility provides a mechanism to produce LLVM bitcode compatible
+with the SPIR 1.2 specification when working with recent versions of
+LLVM. Specifically, this tool takes a SPIR module generated using LLVM
+3.4 and outputs bitcode using LLVM 3.2 encoding. This tool assumes
+that the SPIR module is valid, and does not perform any
+transformations to the module.
+
+
+Usage
+-----
+The encoder is available as a standalone executable for converting
+bitcode files on disk, and a library for inclusion into an existing
+SPIR generator. The standalone executable (spir-encoder) takes two
+arguments: the input bitcode file (an LLVM 3.4 SPIR module), and the
+output file path. To use the library, include the header file
+llvm/SpirTools/SpirBitcodeWriter.h and link against
+libSpirEncoder.a. You can then use the WriteBitcodeToFile_SPIR()
+function to produce an LLVM 3.2 encoded SPIR module.
+
+How To Build with LLVM
+----------------------
+1.clone SPIR-tools repository from https://github.com/KhronosGroup/SPIR-Tools
+2.copy "spir-encoder/llvm_3.4_spir_encoder" directory's content to [llvm3.4-path]/tools/spir-encoder
+3.Build LLVM
