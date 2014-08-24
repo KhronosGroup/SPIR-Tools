@@ -18,6 +18,19 @@
 
 namespace SPIR {
 
+  // Supported SPIR versions
+  enum SPIRversion {
+    SPIR12 = 1,
+    SPIR20 = 2
+  };
+
+  // Error Status values
+  enum MangleError {
+    MANGLE_SUCCESS,
+    MANGLE_TYPE_NOT_SUPPORTED,
+    MANGLE_NULL_FUNC_DESCRIPTOR
+  };
+
   enum TypePrimitiveEnum {
     PRIMITIVE_FIRST,
     PRIMITIVE_BOOL = PRIMITIVE_FIRST,
@@ -36,13 +49,24 @@ namespace SPIR {
     PRIMITIVE_VAR_ARG,
     PRIMITIVE_STRUCT_FIRST,
     PRIMITIVE_IMAGE_1D_T = PRIMITIVE_STRUCT_FIRST,
-    PRIMITIVE_IMAGE_2D_T,
-    PRIMITIVE_IMAGE_3D_T,
-    PRIMITIVE_IMAGE_1D_BUFFER_T,
     PRIMITIVE_IMAGE_1D_ARRAY_T,
+    PRIMITIVE_IMAGE_1D_BUFFER_T,
+    PRIMITIVE_IMAGE_2D_T,
     PRIMITIVE_IMAGE_2D_ARRAY_T,
+    PRIMITIVE_IMAGE_3D_T,
+    PRIMITIVE_IMAGE_2D_MSAA_T,
+    PRIMITIVE_IMAGE_2D_ARRAY_MSAA_T,
+    PRIMITIVE_IMAGE_2D_MSAA_DEPTH_T,
+    PRIMITIVE_IMAGE_2D_ARRAY_MSAA_DEPTH_T,
+    PRIMITIVE_IMAGE_2D_DEPTH_T,
+    PRIMITIVE_IMAGE_2D_ARRAY_DEPTH_T,
     PRIMITIVE_EVENT_T,
-    PRIMITIVE_STRUCT_LAST = PRIMITIVE_EVENT_T,
+    PRIMITIVE_PIPE_T,
+    PRIMITIVE_RESERVE_ID_T,
+    PRIMITIVE_QUEUE_T,
+    PRIMITIVE_NDRANGE_T,
+    PRIMITIVE_CLK_EVENT_T,
+    PRIMITIVE_STRUCT_LAST = PRIMITIVE_CLK_EVENT_T,
     PRIMITIVE_SAMPLER_T,
     PRIMITIVE_LAST = PRIMITIVE_SAMPLER_T,
     PRIMITIVE_NONE,
@@ -54,6 +78,8 @@ namespace SPIR {
     TYPE_ID_PRIMITIVE,
     TYPE_ID_POINTER,
     TYPE_ID_VECTOR,
+    TYPE_ID_ATOMIC,
+    TYPE_ID_BLOCK,
     TYPE_ID_STRUCTURE
   };
 
@@ -68,7 +94,8 @@ namespace SPIR {
     ATTR_GLOBAL,
     ATTR_CONSTANT,
     ATTR_LOCAL,
-    ATTR_ADDR_SPACE_LAST = ATTR_LOCAL,
+    ATTR_GENERIC,
+    ATTR_ADDR_SPACE_LAST = ATTR_GENERIC,
     ATTR_NONE,
     ATTR_NUM = ATTR_NONE
   };
@@ -76,7 +103,6 @@ namespace SPIR {
   // Forward declaration for abstract structure.
   struct ParamType;
   typedef RefCount<ParamType> RefParamType;
-  typedef std::vector<ParamType*> DuplicatedTypeList;
 
   // Forward declaration for abstract structure.
   struct TypeVisitor;
@@ -95,7 +121,7 @@ namespace SPIR {
     ///        When overridden in subclasses, preform a 'double dispatch' to the
     ///        appropriate visit method in the given visitor.
     /// @param TypeVisitor type visitor.
-    virtual void accept(TypeVisitor*) const = 0;
+    virtual MangleError accept(TypeVisitor*) const = 0;
 
     /// @brief Returns a string representation of the underlying type.
     /// @return type as string.
@@ -138,7 +164,7 @@ namespace SPIR {
     ///        When overridden in subclasses, preform a 'double dispatch' to the
     ///        appropriate visit method in the given visitor.
     /// @param TypeVisitor type visitor.
-    void accept(TypeVisitor*) const;
+    MangleError accept(TypeVisitor*) const;
 
     /// @brief Returns a string representation of the underlying type.
     /// @return type as string.
@@ -176,7 +202,7 @@ namespace SPIR {
     ///        When overridden in subclasses, preform a 'double dispatch' to the
     ///        appropriate visit method in the given visitor.
     /// @param TypeVisitor type visitor
-    void accept(TypeVisitor*) const;
+    MangleError accept(TypeVisitor*) const;
 
     /// @brief Returns a string representation of the underlying type.
     /// @return type as string.
@@ -238,7 +264,7 @@ namespace SPIR {
     ///        When overridden in subclasses, preform a 'double dispatch' to the
     ///        appropriate visit method in the given visitor.
     /// @param TypeVisitor type visitor.
-    void accept(TypeVisitor*) const;
+    MangleError accept(TypeVisitor*) const;
 
     /// @brief Returns a string representation of the underlying type.
     /// @return type as string.
@@ -270,6 +296,104 @@ namespace SPIR {
     int m_len;
   };
 
+  struct AtomicType: public ParamType {
+    ///an enumeration to identify the type id of this class
+    const static TypeEnum enumTy;
+
+    /// @brief Constructor
+    /// @param RefParamType the type refernced as atomic.
+    AtomicType(const RefParamType type);
+
+    /// Implementation of Abstract Methods ///
+
+    /// @brief visitor service method. (see TypeVisitor for more details).
+    ///       When overridden in subclasses, preform a 'double dispatch' to the
+    ///       appropriate visit method in the given visitor.
+    /// @param TypeVisitor type visitor
+    MangleError accept(TypeVisitor*) const;
+
+    /// @brief returns a string representation of the underlying type.
+    /// @return type as string
+    std::string toString() const;
+
+    /// @brief returns true if given param type is equal to this type.
+    /// @param ParamType given param type
+    /// @return true if given param type is equal to this type and false otherwise
+    bool equals(const ParamType*) const;
+
+    /// Non-Common Methods ///
+
+    /// @brief returns the base type of the atomic parameter.
+    /// @return base type
+    const RefParamType& getBaseType() const {
+      return m_pType;
+    }
+
+  private:
+    ///the type this pointer is pointing at
+    RefParamType m_pType;
+  };
+
+  struct BlockType : public ParamType {
+    ///an enumeration to identify the type id of this class
+    const static TypeEnum enumTy;
+
+    ///@brief Constructor
+    BlockType();
+
+    /// Implementation of Abstract Methods ///
+
+    /// @brief visitor service method. (see TypeVisitor for more details).
+    ///       When overridden in subclasses, preform a 'double dispatch' to the
+    ///       appropriate visit method in the given visitor.
+    /// @param TypeVisitor type visitor
+    MangleError accept(TypeVisitor*) const;
+
+    /// @brief returns a string representation of the underlying type.
+    /// @return type as string
+    std::string toString() const;
+
+    /// @brief returns true if given param type is equal to this type.
+    /// @param ParamType given param type
+    /// @return true if given param type is equal to this type and false otherwise
+    bool equals(const ParamType*) const;
+
+    /// Non-Common Methods ///
+
+    /// @brief returns the number of parameters of the block.
+    /// @return parameters count
+    unsigned int getNumOfParams() const {
+      return (unsigned int)m_params.size();
+    }
+
+    ///@brief returns the type of parameter "index" of the block.
+    // @param index the sequential number of the queried parameter
+    ///@return parameter type
+    const RefParamType& getParam(unsigned int index) const {
+      assert(m_params.size() > index && "index is OOB");
+      return m_params[index];
+    }
+
+    ///@brief set the type of parameter "index" of the block.
+    // @param index the sequential number of the queried parameter
+    // @param type the parameter type
+    void setParam(unsigned int index, RefParamType type) {
+      if(index < getNumOfParams()) {
+        m_params[index] = type;
+      }
+      else if (index == getNumOfParams()) {
+        m_params.push_back(type);
+      }
+      else {
+        assert(false && "index is OOB");
+      }
+    }
+
+  protected:
+    ///an enumeration to identify the primitive type
+    std::vector<RefParamType> m_params;
+  };
+
 
   struct UserDefinedType : public ParamType {
     /// An enumeration to identify the type id of this class.
@@ -284,7 +408,7 @@ namespace SPIR {
     ///        When overridden in subclasses, preform a 'double dispatch' to the
     ///        appropriate visit method in the given visitor.
     /// @param TypeVisitor type visitor.
-    void accept(TypeVisitor*) const;
+    MangleError accept(TypeVisitor*) const;
 
     /// @brief Returns a string representation of the underlying type.
     /// @return type as string.
@@ -304,10 +428,14 @@ namespace SPIR {
   /// @brief Can be overridden so an object of static type Type* will
   ///        dispatch the correct visit method according to its dynamic type.
   struct TypeVisitor{
-    virtual void visit(const PrimitiveType*)   = 0;
-    virtual void visit(const VectorType*)      = 0;
-    virtual void visit(const PointerType*)     = 0;
-    virtual void visit(const UserDefinedType*) = 0;
+    SPIRversion spirVer;
+    TypeVisitor(SPIRversion ver) : spirVer(ver) {};
+    virtual MangleError visit(const PrimitiveType*)   = 0;
+    virtual MangleError visit(const VectorType*)      = 0;
+    virtual MangleError visit(const PointerType*)     = 0;
+    virtual MangleError visit(const AtomicType*)      = 0;
+    virtual MangleError visit(const BlockType*)       = 0;
+    virtual MangleError visit(const UserDefinedType*) = 0;
   };
 
   /// @brief Template dynamic cast function for ParamType derived classes.

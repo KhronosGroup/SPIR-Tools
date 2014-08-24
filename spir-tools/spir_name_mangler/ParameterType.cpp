@@ -21,8 +21,12 @@ namespace SPIR {
    ParamType(TYPE_ID_PRIMITIVE), m_primitive(primitive) {
   }
 
-  void PrimitiveType::accept(TypeVisitor* visitor) const {
-    visitor->visit(this);
+
+  MangleError PrimitiveType::accept(TypeVisitor* visitor) const {
+    if (getSupportedVersion(this->getPrimitive()) >= SPIR20 && visitor->spirVer < SPIR20) {
+      return MANGLE_TYPE_NOT_SUPPORTED;
+    }
+    return visitor->visit(this);
   }
 
   std::string PrimitiveType::toString() const {
@@ -51,8 +55,8 @@ namespace SPIR {
     m_address_space = ATTR_PRIVATE;
   }
 
-  void PointerType::accept(TypeVisitor* visitor) const {
-    visitor->visit(this);
+  MangleError PointerType::accept(TypeVisitor* visitor) const {
+    return visitor->visit(this);
   }
 
   void PointerType::setAddressSpace(TypeAttributeEnum attr) {
@@ -118,8 +122,8 @@ namespace SPIR {
     ParamType(TYPE_ID_VECTOR), m_pType(type), m_len(len) {
   }
 
-  void VectorType::accept(TypeVisitor* visitor) const {
-    visitor->visit(this);
+  MangleError VectorType::accept(TypeVisitor* visitor) const {
+    return visitor->visit(this);
   }
 
   std::string VectorType::toString() const {
@@ -136,14 +140,79 @@ namespace SPIR {
   }
 
   //
+  //Atomic Type
+  //
+
+  AtomicType::AtomicType(const RefParamType type) :
+    ParamType(TYPE_ID_ATOMIC), m_pType(type) {
+  }
+
+  MangleError AtomicType::accept(TypeVisitor* visitor) const {
+    if (visitor->spirVer < SPIR20) {
+      return MANGLE_TYPE_NOT_SUPPORTED;
+    }
+    return visitor->visit(this);
+  }
+
+  std::string AtomicType::toString() const {
+    std::stringstream myName;
+    myName << "atomic_" << getBaseType()->toString();
+    return myName.str();
+  }
+
+  bool AtomicType::equals(const ParamType* type) const {
+    const AtomicType* a = dyn_cast<AtomicType>(type);
+    return (a && (*getBaseType()).equals(&*(a->getBaseType())));
+  }
+
+  //
+  //Block Type
+  //
+
+  BlockType::BlockType() :
+    ParamType(TYPE_ID_BLOCK) {
+  }
+
+  MangleError BlockType::accept(TypeVisitor* visitor) const {
+    if (visitor->spirVer < SPIR20) {
+      return MANGLE_TYPE_NOT_SUPPORTED;
+    }
+    return visitor->visit(this);
+  }
+
+  std::string BlockType::toString() const {
+    std::stringstream myName;
+    myName << "void (";
+    for (unsigned int i=0; i<getNumOfParams(); ++i) {
+      if (i>0) myName << ", ";
+      myName << m_params[i]->toString();
+    }
+    myName << ")*";
+    return myName.str();
+  }
+
+  bool BlockType::equals(const ParamType* type) const {
+    const BlockType* pBlock = dyn_cast<BlockType>(type);
+    if (!pBlock || getNumOfParams() != pBlock->getNumOfParams() ) {
+      return false;
+    }
+    for (unsigned int i=0; i<getNumOfParams(); ++i) {
+      if (!getParam(i)->equals(&*pBlock->getParam(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  //
   // User Defined Type
   //
   UserDefinedType::UserDefinedType(const std::string& name):
     ParamType(TYPE_ID_STRUCTURE), m_name(name) {
   }
 
-  void UserDefinedType::accept(TypeVisitor* visitor) const {
-    visitor->visit(this);
+  MangleError UserDefinedType::accept(TypeVisitor* visitor) const {
+    return visitor->visit(this);
   }
 
   std::string UserDefinedType::toString() const {
@@ -164,6 +233,8 @@ namespace SPIR {
   const TypeEnum PrimitiveType::enumTy    = TYPE_ID_PRIMITIVE;
   const TypeEnum PointerType::enumTy      = TYPE_ID_POINTER;
   const TypeEnum VectorType::enumTy       = TYPE_ID_VECTOR;
+  const TypeEnum AtomicType::enumTy       = TYPE_ID_ATOMIC;
+  const TypeEnum BlockType::enumTy        = TYPE_ID_BLOCK;
   const TypeEnum UserDefinedType::enumTy  = TYPE_ID_STRUCTURE;
 
 } // End SPIR namespace

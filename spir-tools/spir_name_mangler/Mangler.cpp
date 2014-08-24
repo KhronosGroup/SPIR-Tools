@@ -8,8 +8,9 @@
 //===---------------------------------------------------------------------===//
 
 #include "FunctionDescriptor.h"
-#include "ParameterType.h"
 #include "ManglingUtils.h"
+#include "NameMangleAPI.h"
+#include "ParameterType.h"
 #include <string>
 #include <sstream>
 
@@ -18,21 +19,18 @@ namespace SPIR {
 class MangleVisitor: public TypeVisitor {
 public:
 
-  MangleVisitor(std::stringstream& s): m_stream(s) {
-  }
-
-  void operator() (const ParamType* t) {
-    t->accept(this);
+  MangleVisitor(SPIRversion ver, std::stringstream& s): TypeVisitor(ver), m_stream(s) {
   }
 
 //
 // Visit methods
 //
-  void visit(const PrimitiveType* t) {
+  MangleError visit(const PrimitiveType* t) {
     m_stream << mangledPrimitiveString(t->getPrimitive());
+    return MANGLE_SUCCESS;
   }
 
-  void visit(const PointerType* p) {
+  MangleError visit(const PointerType* p) {
     m_stream << "P";
     for (unsigned int i = ATTR_QUALIFIER_FIRST; i <= ATTR_QUALIFIER_LAST; i++) {
       TypeAttributeEnum qualifier = (TypeAttributeEnum)i;
@@ -41,18 +39,35 @@ public:
       }
     }
     m_stream << getMangledAttribute((p->getAddressSpace()));
-    p->getPointee()->accept(this);
+    return p->getPointee()->accept(this);
   }
 
-  void visit(const VectorType* v) {
+  MangleError visit(const VectorType* v) {
     m_stream << "Dv" << v->getLength() << "_";
-    v->getScalarType()->accept(this);
+    return v->getScalarType()->accept(this);
   }
 
+  MangleError visit(const AtomicType* p) {
+    m_stream << "U" << "7_Atomic";
+    return p->getBaseType()->accept(this);
+  }
 
-  void visit(const UserDefinedType* pTy) {
+  MangleError visit(const BlockType* p) {
+    m_stream << "U" << "13block_pointerFv";
+    for (unsigned int i=0; i < p->getNumOfParams(); ++i) {
+      MangleError err = p->getParam(i)->accept(this);
+      if (err != MANGLE_SUCCESS) {
+        return err;
+      }
+    }
+    m_stream << "E";
+    return MANGLE_SUCCESS;
+  }
+
+  MangleError visit(const UserDefinedType* pTy) {
     std::string name = pTy->toString();
     m_stream << name.size() << name;
+    return MANGLE_SUCCESS;
   }
 
 private:
@@ -61,16 +76,32 @@ private:
   std::stringstream& m_stream;
 };
 
-std::string mangle(const FunctionDescriptor& fd) {
-  if (fd.isNull())
-    return FunctionDescriptor::nullString();
-  std::stringstream ret;
-  ret << "_Z" << fd.name.length() << fd.name;
-  MangleVisitor visitor(ret);
-  for (unsigned int i=0; i < fd.parameters.size(); ++i) {
-    fd.parameters[i]->accept(&visitor);
+//
+// NameMangler
+//
+  NameMangler::NameMangler(SPIRversion version):m_spir_version(version) {};
+
+  MangleError NameMangler::mangle(const FunctionDescriptor& fd, std::string& mangledName ) {
+    if (fd.isNull()) {
+      mangledName.assign(FunctionDescriptor::nullString());
+      return MANGLE_NULL_FUNC_DESCRIPTOR;
+    }
+    std::stringstream ret;
+    ret << "_Z" << fd.name.length() << fd.name;
+    MangleVisitor visitor(m_spir_version, ret);
+    for (unsigned int i=0; i < fd.parameters.size(); ++i) {
+      MangleError err = fd.parameters[i]->accept(&visitor);
+      if(err == MANGLE_TYPE_NOT_SUPPORTED) {
+        mangledName.assign("Type ");
+        mangledName.append(fd.parameters[i]->toString());
+        mangledName.append(" is not supported in ");
+        std::string ver = getSPIRVersionAsString(m_spir_version);
+        mangledName.append(ver);
+        return err;
+      }
+    }
+    mangledName.assign(ret.str());
+    return MANGLE_SUCCESS;
   }
-  return ret.str();
-}
 
 } // End SPIR namespace

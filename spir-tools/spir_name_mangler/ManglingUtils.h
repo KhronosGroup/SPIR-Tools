@@ -20,6 +20,8 @@ namespace SPIR {
   const char* getMangledAttribute(TypeAttributeEnum attribute);
   const char* getReadableAttribute(TypeAttributeEnum attribute);
 
+  const SPIRversion getSupportedVersion(TypePrimitiveEnum t);
+  const char* getSPIRVersionAsString(SPIRversion version);
 } // End SPIR namespace
 
 #endif //__MANGLING_UTILS_H__
