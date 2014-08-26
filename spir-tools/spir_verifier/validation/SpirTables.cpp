@@ -220,6 +220,14 @@ const char *g_valid_calling_convention[] = {
 };
 DCL_ARRAY_LENGTH(g_valid_calling_convention);
 
+const char *g_valid_linkage_type[] = {
+  "private",
+  "internal",
+  "available_externally",
+  "external"
+};
+DCL_ARRAY_LENGTH(g_valid_linkage_type);
+
 
 const char *OPENCL_KERNELS = "opencl.kernels";
 const char *OPENCL_SPIR_VERSION = "opencl.spir.version";
@@ -364,6 +372,10 @@ std::string getValidLLVMTypeMsg() {
   return Msg;
 }
 
+std::string getValidKernelReturnTypeMsg() {
+  return "SPIR kernel has to return void";
+}
+
 std::string getValidIntrinsicMsg() {
   std::string Msg;
   Msg += "Valid intrinsic in " + STR_SPIR + " are:\n";
@@ -389,12 +401,50 @@ std::string getValidAddressSpaceMsg() {
   return Msg;
 }
 
+std::string getValidKernelArgAddressSpaceMsg() {
+  std::string Msg;
+  Msg += "Valid address spaces for kernel arguments in " + STR_SPIR + " are:\n";
+  std::stringstream SS;
+  SS << STR_IND1 << GLOBAL_ADDR_SPACE << " - " << g_valid_address_space[GLOBAL_ADDR_SPACE] << "\n";
+  SS << STR_IND1 << CONSTANT_ADDR_SPACE << " - " << g_valid_address_space[CONSTANT_ADDR_SPACE] << "\n";
+  SS << STR_IND1 << LOCAL_ADDR_SPACE << " - " << g_valid_address_space[LOCAL_ADDR_SPACE] << "\n";
+  Msg += SS.str();
+  return Msg;
+}
+
+extern std::string getValidGlobalAS3VariableMsg() {
+  std::string Msg = "Function-scope variables in the local address space\n";
+  Msg += STR_IND1 + "are represented by module-scope variables with addrspace(3).\n";
+  Msg += STR_IND1 + "The name of the variables has to have the following format:\n";
+  Msg += STR_IND1 + "@<function_name>.<variable_name>\n";
+  return Msg;
+}
+
+extern std::string getValidGlobalVarAddressSpacesMsg() {
+  std::string Msg;
+  Msg += "Valid address spaces for module-scope variables " + STR_SPIR + " are:\n";
+  std::stringstream SS;
+  SS << STR_IND1 << CONSTANT_ADDR_SPACE << " - " << g_valid_address_space[CONSTANT_ADDR_SPACE] << "\n";
+  SS << STR_IND1 << LOCAL_ADDR_SPACE << " - " << g_valid_address_space[LOCAL_ADDR_SPACE] << "\n";
+  Msg += SS.str();
+  return Msg;
+}
+
 std::string getValidCallingConventionMsg() {
   std::string Msg;
   Msg += "Valid user defined functions calling convention in ";
   Msg += STR_SPIR + " are:\n";
   for (unsigned i=0; i<g_valid_calling_convention_len; i++) {
     Msg += STR_IND1 + g_valid_calling_convention[i] + "\n";
+  }
+  return Msg;
+}
+
+std::string getValidLinkageTypeMsg() {
+  std::string Msg;
+  Msg += "Valid linkage types in " + STR_SPIR + " are:\n";
+  for (unsigned i = 0; i < g_valid_linkage_type_len; i++) {
+    Msg += STR_IND1 + g_valid_linkage_type[i] + "\n";
   }
   return Msg;
 }

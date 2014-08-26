@@ -7,13 +7,20 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "LLVMVersion.h"
 #include "SpirValidation.h"
 #include "SpirErrors.h"
 #include "SpirIterators.h"
 
-#include "llvm/Module.h"
-#include "llvm/Instructions.h"
-#include "llvm/DataLayout.h"
+#if LLVM_VERSION==3200
+  #include "llvm/Module.h"
+  #include "llvm/Instructions.h"
+  #include "llvm/DataLayout.h"
+#else
+  #include "llvm/IR/Module.h"
+  #include "llvm/IR/Instructions.h"
+  #include "llvm/IR/DataLayout.h"
+#endif
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -57,6 +64,15 @@ bool SpirValidation::runOnModule(Module& M) {
   // Function prototype verifier.
   VerifyFunctionPrototype vfp(&ErrHolder, &Data);
   fel.push_back(&vfp);
+  // Kernel prototype verifier
+  VerifyKernelPrototype vkp(&ErrHolder, &Data);
+  fel.push_back(&vkp);
+
+  // Initialize global variable verifiers
+  GlobalVariableExecutorList gel;
+  // Global variable verifier
+  VerifyGlobalVariable vgv(&ErrHolder, &Data);
+  gel.push_back(&vgv);
 
   // Initialize module verifiers.
   ModuleExecutorList mel;
@@ -90,8 +106,11 @@ bool SpirValidation::runOnModule(Module& M) {
   // Initialize function iterator.
   FunctionIterator FI(fel, &BBI);
 
+  // Initialize global variable iterator.
+  GlobalVariableIterator GI(gel);
+
   // Initialize module iterator.
-  ModuleIterator MI(mel, &FI);
+  ModuleIterator MI(mel, &FI, &GI);
 
   // Run validation.
   MI.execute(M);
@@ -101,10 +120,8 @@ bool SpirValidation::runOnModule(Module& M) {
 
 
 } // End SPIR namespace
-
-extern "C" {
+ extern "C" {
   ModulePass *createSpirValidationPass() {
     return new SPIR::SpirValidation();
-  }
+ }
 }
-

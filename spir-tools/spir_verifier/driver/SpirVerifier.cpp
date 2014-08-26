@@ -7,9 +7,14 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "validation/LLVMVersion.h"
 #include "validation/SpirValidation.h"
 
-#include "llvm/LLVMContext.h"
+#if LLVM_VERSION==3200
+  #include "llvm/LLVMContext.h"
+#else
+  #include "llvm/IR/LLVMContext.h"
+#endif
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
@@ -23,6 +28,8 @@ using namespace SPIR;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
     cl::init(""), cl::value_desc("filename"));
+
+static cl::opt<bool> LITMode("LIT-test-mode", cl::init(false), cl::Hidden, cl::desc("Print output errors' names only, for LIT tests usage"));
 
 const char *HelpMessage = "SPIR Verifier expects argument <path to file name>...\n";
 
@@ -61,7 +68,7 @@ int main(int argc, const char *argv[]) {
   if (EP->hasErrors()) {
     outs() << "According to this SPIR Verifier, " << Path << " is an invalid SPIR module.\n";
     errs() << "The module contains the following errors:\n\n";
-    EP->print(errs());
+    EP->print(errs(), LITMode.getValue());
     return 1;
   }
 

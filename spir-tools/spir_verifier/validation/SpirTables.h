@@ -18,6 +18,13 @@ namespace SPIR {
 // Constant definitions.
 //
 
+typedef enum AddrSpace {
+  PRIVATE_ADDR_SPACE = 0,
+  GLOBAL_ADDR_SPACE = 1,
+  CONSTANT_ADDR_SPACE = 2,
+  LOCAL_ADDR_SPACE = 3
+};
+
 extern const char *SPIR32_TRIPLE;
 extern const char *SPIR64_TRIPLE ;
 extern const char *SPIR32_DATA_LAYOUT;
@@ -92,6 +99,9 @@ EXTREN_DCL_ARRAY_LENGTH(g_valid_address_space);
 extern const char *g_valid_calling_convention[];
 EXTREN_DCL_ARRAY_LENGTH(g_valid_calling_convention);
 
+extern const char *g_valid_linkage_type[];
+EXTREN_DCL_ARRAY_LENGTH(g_valid_linkage_type);
+
 extern const char *OPENCL_KERNELS;
 extern const char *OPENCL_SPIR_VERSION;
 extern const char *OPENCL_OCL_VERSION;
@@ -131,15 +141,25 @@ extern std::string getValidOpenCLTypeMsg();
 
 extern std::string getValidLLVMTypeMsg();
 
+extern std::string getValidKernelReturnTypeMsg();
+
 extern std::string getValidIntrinsicMsg();
 
 extern std::string getValidAddressSpaceMsg();
 
 extern std::string getValidCallingConventionMsg();
 
+extern std::string getValidLinkageTypeMsg();
+
+extern std::string getValidGlobalAS3VariableMsg();
+
+extern std::string getValidGlobalVarAddressSpacesMsg();
+
 extern std::string getValidIndirectCallMsg();
 
 extern std::string getValidKernelArgInfoMsg();
+
+extern std::string getValidKernelArgAddressSpaceMsg();
 
 extern std::string getValidVersionMsg();
 

@@ -7,12 +7,19 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "LLVMVersion.h"
 #include "SpirErrors.h"
 #include "SpirTables.h"
 
-#include "llvm/Type.h"
-#include "llvm/Value.h"
-#include "llvm/Metadata.h"
+#if LLVM_VERSION==3200
+  #include "llvm/Type.h"
+  #include "llvm/Value.h"
+  #include "llvm/Metadata.h"
+#else
+  #include "llvm/IR/Type.h"
+  #include "llvm/IR/Value.h"
+  #include "llvm/IR/Metadata.h"
+#endif
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
@@ -30,6 +37,10 @@ namespace SPIR {
   INFO_DATA_LAYOUT,
   INFO_OCL_TYPE,
   INFO_LLVM_TYPE,
+  INFO_KERNEL_RETURN_TYPE,
+  INFO_KERNEL_ARG_ADDRESS_SPACE,
+  INFO_GLOBAL_AS3_VAR,
+  INFO_GLOBAL_VAR_ADDRES_SPACES,
   INFO_OCL_TO_LLVM_TYPE,
   INFO_CORE_FEATURE_METADATA,
   INFO_KHR_EXT_METADATA,
@@ -37,6 +48,7 @@ namespace SPIR {
   INFO_INTRINSIC,
   INFO_ADDRESS_SPACE,
   INFO_CALLING_CONVENTION,
+  INFO_LINKAGE_TYPE,
   INFO_INDIRECT_CALL,
   INFO_NAMED_METADATA,
   INFO_METADATA_KERNEL_ARG_INFO,
@@ -97,6 +109,7 @@ struct SPIR_ERROR_DATA {
   SPIR_ERROR_TYPE T;
   std::string MSG;
   SPIR_INFO_TYPE InfoList[MAX_ERROR_INFO_PER_ERROR];
+  std::string ErrTypeStr;
 };
 
 typedef std::string (GetInfoMsgFunc)();
@@ -110,51 +123,63 @@ typedef std::map<SPIR_INFO_TYPE, unsigned> SPIRInfoTypeNumMap;
 const SPIR_ERROR_DATA g_ErrorData[SPIR_ERROR_NUM] = {
   // Module (general) errors
   {ERR_INVALID_TRIPLE, "Invalid triple",
-      {INFO_TRIPLE}},
+      {INFO_TRIPLE}, "ERR_INVALID_TRIPLE"},
   {ERR_INVALID_DATA_LAYOUT, "Invalid data layout",
-      {INFO_DATA_LAYOUT}},
+      {INFO_DATA_LAYOUT}, "ERR_INVALID_DATA_LAYOUT"},
   {ERR_MISMATCH_TRIPLE_AND_DATA_LAYOUT, "Mismatch between triple and data layout",
-      {INFO_TRIPLE, INFO_DATA_LAYOUT}},
+      {INFO_TRIPLE, INFO_DATA_LAYOUT},"ERR_MISMATCH_TRIPLE_AND_DATA_LAYOUT"},
   // Type errors
   {ERR_INVALID_OCL_TYPE, "Invalid OpenCL C type",
-      {INFO_OCL_TYPE, INFO_CORE_FEATURE_METADATA, INFO_KHR_EXT_METADATA}},
+      {INFO_OCL_TYPE, INFO_CORE_FEATURE_METADATA, INFO_KHR_EXT_METADATA}, "ERR_INVALID_OCL_TYPE"},
   {ERR_INVALID_LLVM_TYPE, "Invalid LLVM type",
-      {INFO_LLVM_TYPE, INFO_CORE_FEATURE_METADATA, INFO_KHR_EXT_METADATA}},
+      {INFO_LLVM_TYPE, INFO_CORE_FEATURE_METADATA, INFO_KHR_EXT_METADATA}, "ERR_INVALID_LLVM_TYPE"},
+  {ERR_INVALID_KERNEL_RETURN_TYPE, "Invalid SPIR kernel return type",
+      {INFO_KERNEL_RETURN_TYPE}, "ERR_INVALID_KERNEL_RETURN_TYPE"},
+  {ERR_KERNEL_ARG_PTRPTR, "SPIR kernel argument is a pointer to pointer",
+      {}, "ERR_KERNEL_ARG_PTRPTR"},
+  {ERR_KERNEL_ARG_AS0, "SPIR kernel argument is a pointer to private address space",
+      {INFO_KERNEL_ARG_ADDRESS_SPACE}, "ERR_KERNEL_ARG_AS0"},
   {ERR_MISMATCH_OCL_AND_LLVM_TYPES, "Mismatch between OpenCL C and LLVM types",
-      {INFO_OCL_TO_LLVM_TYPE}},
+      {INFO_OCL_TO_LLVM_TYPE}, "ERR_MISMATCH_OCL_AND_LLVM_TYPES"},
+  {ERR_INVALID_GLOBAL_AS3_VAR, "Invalid program scope __local variable",
+    {INFO_GLOBAL_AS3_VAR}, "ERR_INVALID_GLOBAL_AS3_VAR"},
+  {ERR_INVALID_GLOBAL_VAR_ADDRESS_SPACE, "program scope variable in a wrong address space",
+    {INFO_GLOBAL_VAR_ADDRES_SPACES}, "ERR_INVALID_GLOBAL_VAR_ADDRESS_SPACE"},
   // Instruction errors
   {ERR_INVALID_INTRINSIC, "Invalid intrinsic",
-      {INFO_INTRINSIC}},
+      {INFO_INTRINSIC},"ERR_INVALID_INTRINSIC"},
   {ERR_INVALID_ADDR_SPACE, "Invalid address space",
-      {INFO_ADDRESS_SPACE}},
+      {INFO_ADDRESS_SPACE}, "ERR_INVALID_ADDR_SPACE"},
   {ERR_INVALID_ADDR_SPACE_CAST, "Invalid address space cast",
-      {INFO_ADDRESS_SPACE}},
+      {INFO_ADDRESS_SPACE}, "ERR_INVALID_ADDR_SPACE_CAST"},
   {ERR_INVALID_INDIRECT_CALL, "Invalid indirect call",
-      {INFO_INDIRECT_CALL}},
+      {INFO_INDIRECT_CALL}, "ERR_INVALID_INDIRECT_CALL"},
   {ERR_INVALID_MEM_FENCE, "Invalid cl_mem_fence value",
-      {INFO_MEM_FENCE}},
+      {INFO_MEM_FENCE}, "ERR_INVALID_MEM_FENCE"},
   // Function errors
   {ERR_INVALID_CALLING_CONVENTION, "Invalid calling convention",
-      {INFO_CALLING_CONVENTION}},
+      {INFO_CALLING_CONVENTION}, "ERR_INVALID_CALLING_CONVENTION"},
+  {ERR_INVALID_LINKAGE_TYPE, "Invalid linkage type",
+      {INFO_LINKAGE_TYPE}, "ERR_INVALID_LINKAGE_TYPE"},
   // Metadata errors
   {ERR_INVALID_CORE_FEATURE, "Invalid core features",
-      {INFO_CORE_FEATURE_METADATA}},
+      {INFO_CORE_FEATURE_METADATA}, "ERR_INVALID_CORE_FEATURE"},
   {ERR_INVALID_KHR_EXT, "Invalid KHR extensions",
-      {INFO_KHR_EXT_METADATA}},
+      {INFO_KHR_EXT_METADATA}, "ERR_INVALID_KHR_EXT"},
   {ERR_INVALID_COMPILER_OPTION, "Invalid compiler options",
-      {INFO_COMPILER_OPTION_METADATA}},
+      {INFO_COMPILER_OPTION_METADATA},"ERR_INVALID_COMPILER_OPTION"},
   {ERR_MISSING_NAMED_METADATA, "Named Metadata is missing",
-      {INFO_NAMED_METADATA}},
+      {INFO_NAMED_METADATA}, "ERR_MISSING_NAMED_METADATA"},
   {ERR_INVALID_METADATA_KERNEL, "Invalid kernel metatdata",
-      {}},
+      {}, "ERR_INVALID_METADATA_KERNEL"},
   {ERR_INVALID_METADATA_KERNEL_INFO, "Invalid kernel metadata ARG Info",
-      {INFO_METADATA_KERNEL_ARG_INFO}},
+      {INFO_METADATA_KERNEL_ARG_INFO}, "ERR_INVALID_METADATA_KERNEL_INFO"},
   {ERR_MISSING_METADATA_KERNEL_INFO, "Kernel metadata is missing ARG Info",
-      {INFO_METADATA_KERNEL_ARG_INFO}},
+      {INFO_METADATA_KERNEL_ARG_INFO}, "ERR_MISSING_METADATA_KERNEL_INFO"},
   {ERR_INVALID_METADATA_VERSION, "Invalid OpenCL (OCL/SPIR) version",
-      {INFO_METADATA_VERSION}},
+      {INFO_METADATA_VERSION}, "ERR_INVALID_METADATA_VERSION"},
   {ERR_MISMATCH_METADATA_ADDR_SPACE, "Address space mismatch between kernel prototype and metadata",
-      {}}
+      {}, "ERR_MISMATCH_METADATA_ADDR_SPACE"}
 };
 
 const SPIR_INFO_DATA g_InfoData[SPIR_INFO_NUM] = {
@@ -163,6 +188,10 @@ const SPIR_INFO_DATA g_InfoData[SPIR_INFO_NUM] = {
   {INFO_DATA_LAYOUT, getValidDataLayoutMsg},
   {INFO_OCL_TYPE, getValidOpenCLTypeMsg},
   {INFO_LLVM_TYPE, getValidLLVMTypeMsg},
+  {INFO_KERNEL_RETURN_TYPE, getValidKernelReturnTypeMsg},
+  {INFO_KERNEL_ARG_ADDRESS_SPACE, getValidKernelArgAddressSpaceMsg},
+  {INFO_GLOBAL_AS3_VAR, getValidGlobalAS3VariableMsg},
+  {INFO_GLOBAL_VAR_ADDRES_SPACES, getValidGlobalVarAddressSpacesMsg},
   {INFO_OCL_TO_LLVM_TYPE, getMapOpenCLToLLVMMsg},
   {INFO_CORE_FEATURE_METADATA, getValidCoreFeaturesMsg},
   {INFO_KHR_EXT_METADATA, getValidKHRExtensionsMsg},
@@ -170,6 +199,7 @@ const SPIR_INFO_DATA g_InfoData[SPIR_INFO_NUM] = {
   {INFO_INTRINSIC, getValidIntrinsicMsg},
   {INFO_ADDRESS_SPACE, getValidAddressSpaceMsg},
   {INFO_CALLING_CONVENTION, getValidCallingConventionMsg},
+  {INFO_LINKAGE_TYPE, getValidLinkageTypeMsg},
   {INFO_INDIRECT_CALL, getValidIndirectCallMsg},
   {INFO_NAMED_METADATA, getValidNamedMetadataMsg},
   {INFO_METADATA_KERNEL_ARG_INFO, getValidKernelArgInfoMsg},
@@ -271,7 +301,7 @@ void ErrorHolder::addError(SPIR_ERROR_TYPE Err, const llvm::Type *T,
   EL.push_back(VE);
 }
 
-void ErrorHolder::print(llvm::raw_ostream &S) const {
+void ErrorHolder::print(llvm::raw_ostream &S, bool LITMode) const {
   ErrorList UEL;
   SPIRInfoTypeNumMap ITmap;
   // Calculate unique error list
@@ -296,18 +326,20 @@ void ErrorHolder::print(llvm::raw_ostream &S) const {
   // Assign error info number for each relevant info type
   // Create SPIR Info message
   std::string InfoMsg;
-  unsigned ErrInfoNum = 0;
-  InfoMsg += "---------------------------------------------";
-  InfoMsg += "---------------------------------------------\n";
-  for (unsigned i=0; i<SPIR_INFO_NUM; i++) {
-    SPIR_INFO_TYPE InfoType = g_InfoData[i].T;
-    if (ITmap.count(InfoType) != 0) {
-      // Set error info number
-      ITmap[InfoType] = ++ErrInfoNum;
-      // Append error info message
-      std::stringstream SS;
-      SS << "[" << ErrInfoNum << "] " << g_InfoData[i].GetMsg() << "\n";
-      InfoMsg += SS.str();
+  if (!LITMode) {
+    unsigned ErrInfoNum = 0;
+    InfoMsg += "---------------------------------------------";
+    InfoMsg += "---------------------------------------------\n";
+    for (unsigned i=0; i<SPIR_INFO_NUM; i++) {
+      SPIR_INFO_TYPE InfoType = g_InfoData[i].T;
+      if (ITmap.count(InfoType) != 0) {
+        // Set error info number
+        ITmap[InfoType] = ++ErrInfoNum;
+        // Append error info message
+        std::stringstream SS;
+        SS << "[" << ErrInfoNum << "] " << g_InfoData[i].GetMsg() << "\n";
+        InfoMsg += SS.str();
+      }
     }
   }
 
@@ -320,13 +352,17 @@ void ErrorHolder::print(llvm::raw_ostream &S) const {
     std::stringstream SS;
     SPIR_ERROR_TYPE ErrType = Err->getErrorType();
     SS << "(" << ++ErrNum << ") Error";
-    for (unsigned i=0; i<MAX_ERROR_INFO_PER_ERROR; i++) {
-      SPIR_INFO_TYPE InfoType = g_ErrorData[ErrType].InfoList[i];
-      if (InfoType != INFO_NONE) {
-        SS << "[" << ITmap[InfoType] << "]";
+    if(!LITMode) {
+      for (unsigned i=0; i<MAX_ERROR_INFO_PER_ERROR; i++) {
+        SPIR_INFO_TYPE InfoType = g_ErrorData[ErrType].InfoList[i];
+        if (InfoType != INFO_NONE) {
+          SS << "[" << ITmap[InfoType] << "]";
+        }
       }
+      SS << " " << g_ErrorData[ErrType].MSG.c_str() << ":\n";
+    } else {
+      SS << " " << g_ErrorData[ErrType].ErrTypeStr << ":\n";
     }
-    SS << " " << g_ErrorData[ErrType].MSG.c_str() << ":\n";
     SS << Err->toString().str().c_str() << "\n";
     ErrMsg += SS.str();
   }

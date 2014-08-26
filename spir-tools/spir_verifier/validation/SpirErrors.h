@@ -35,7 +35,12 @@ typedef enum {
   // Type errors
   ERR_INVALID_OCL_TYPE,
   ERR_INVALID_LLVM_TYPE,
+  ERR_INVALID_KERNEL_RETURN_TYPE,
+  ERR_KERNEL_ARG_PTRPTR,
+  ERR_KERNEL_ARG_AS0,
   ERR_MISMATCH_OCL_AND_LLVM_TYPES,
+  ERR_INVALID_GLOBAL_AS3_VAR,
+  ERR_INVALID_GLOBAL_VAR_ADDRESS_SPACE,
   // Instruction errors
   ERR_INVALID_INTRINSIC,
   ERR_INVALID_ADDR_SPACE,
@@ -44,6 +49,7 @@ typedef enum {
   ERR_INVALID_MEM_FENCE,
   // Function errors
   ERR_INVALID_CALLING_CONVENTION,
+  ERR_INVALID_LINKAGE_TYPE,
   // Metadata errors
   ERR_INVALID_CORE_FEATURE,
   ERR_INVALID_KHR_EXT,
@@ -61,7 +67,8 @@ typedef enum {
 struct ErrorPrinter {
   /// @brief prints all errors to given output stream.
   /// @param S output stream.
-  virtual void print(llvm::raw_ostream &S) const = 0;
+  /// @param LITMode prints error names only in when set to true
+  virtual void print(llvm::raw_ostream &S, bool LITMode) const = 0;
 
   /// @brief Checks if the module has errors.
   /// @returns true if errors list is not emtpy.
@@ -119,7 +126,7 @@ struct ErrorHolder : ErrorCreator, ErrorPrinter {
                                              const llvm::Value *V);
 
   /// Implementation of the pure virtual methods of ErrorPrinter interface
-  virtual void print(llvm::raw_ostream &S) const;
+  virtual void print(llvm::raw_ostream &S, bool LITMode) const;
   virtual bool hasErrors() const;
 
 private:

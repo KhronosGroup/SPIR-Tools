@@ -1,0 +1,12 @@
+# Do not edit!
+
+# SPIR tools config
+config.spir_src_root  = "@CMAKE_CURRENT_SOURCE_DIR@/.."
+
+# LLVM config
+config.llvm_tools_dir = "@LLVM_BINARY_DIR@/bin/Debug"
+config.llvm_src_root  = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root  = "@LLVM_BINARY_DIR@"
+
+# Let the main config do the real work.
+lit.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

@@ -7,16 +7,28 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "LLVMVersion.h"
 #include "SpirIterators.h"
 #include "SpirErrors.h"
 #include "SpirTables.h"
 
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/Instruction.h"
-#include "llvm/Instructions.h"
+#if LLVM_VERSION==3200
+  #include "llvm/Module.h"
+  #include "llvm/Function.h"
+  #include "llvm/Instruction.h"
+  #include "llvm/Instructions.h"
+  #include "llvm/Value.h"
+#else
+  #include "llvm/IR/Module.h"
+  #include "llvm/IR/Function.h"
+  #include "llvm/IR/Instruction.h"
+  #include "llvm/IR/Instructions.h"
+  #include "llvm/IR/Value.h"
+#endif
+
 
 #include <sstream>
+#include <algorithm>
 
 namespace SPIR {
 
@@ -54,6 +66,15 @@ void FunctionIterator::execute(const llvm::Function& F) {
   }
 }
 
+void GlobalVariableIterator::execute(const llvm::GlobalVariable& GV) {
+  // Apply all executors from the list on the given global variable.
+  GlobalVariableExecutorList::iterator gei = m_gvel.begin(),
+                                       gee = m_gvel.end();
+  for (; gei != gee; gei++) {
+    (*gei)->execute(&GV);
+  }
+}
+
 void ModuleIterator::execute(const llvm::Module& M) {
   // Apply all executors from the list on the given module.
   ModuleExecutorList::iterator mei = m_mel.begin(), mee = m_mel.end();
@@ -67,6 +88,15 @@ void ModuleIterator::execute(const llvm::Module& M) {
     for (; fi != fe; fi++) {
       const Function *F = &*fi;
       m_fi->execute(*F);
+    }
+  }
+  // If global variable iterator available
+  // Apply it for each global variable in the given module.
+  if (m_gi) {
+    Module::const_global_iterator gi = M.global_begin(), ge = M.global_end();
+    for (; gi != ge; gi++) {
+      const GlobalVariable *GV = &*gi;
+      m_gi->execute(*GV);
     }
   }
 }
@@ -445,6 +475,13 @@ static bool isValidMemfence(unsigned Val) {
   return (Val == 1 || Val == 2 || Val == 3);
 }
 
+static bool isValidLinkageType(llvm::GlobalValue::LinkageTypes LT) {
+  return LT == llvm::GlobalValue::ExternalLinkage
+      || LT == llvm::GlobalValue::PrivateLinkage
+      || LT == llvm::GlobalValue::InternalLinkage
+      || LT == llvm::GlobalValue::AvailableExternallyLinkage;
+}
+
 //
 // Verify Executor classes (impl).
 //
@@ -531,10 +568,75 @@ void VerifyFunctionPrototype::execute(const Function *F) {
       ErrCreator->addError(ERR_INVALID_LLVM_TYPE, Ty, F->getName());
     }
   }
+  // Verify function linkage
+  if (!isValidLinkageType(F->getLinkage())) {
+    ErrCreator->addError(ERR_INVALID_LINKAGE_TYPE, F->getName());
+  }
   // Verify function return type.
   if (!isValidType(F->getReturnType(), Data, true, true, false, false)) {
     ErrCreator->addError(
       ERR_INVALID_LLVM_TYPE, F->getReturnType(), F->getName());
+  }
+}
+
+void VerifyKernelPrototype::execute(const Function *F) {
+  // detect kernel by looking at the calling convention
+  if (F->getCallingConv() != CallingConv::SPIR_KERNEL)
+    return;
+
+  // check arguments
+  Function::const_arg_iterator ai = F->arg_begin(), ae = F->arg_end();
+  for (; ai != ae; ai++) {
+    Type *Ty = ai->getType();
+
+    // kernel arguments shall not be pointers to pointers
+    if (Ty->isPointerTy() && Ty->getPointerElementType()->isPointerTy()) {
+      ErrCreator->addError(ERR_KERNEL_ARG_PTRPTR, Ty, F->getName());
+    }
+
+    // kernel arguments shall not be pointers to a private addrspace
+    if (Ty->isPointerTy() && Ty->getPointerAddressSpace() == PRIVATE_ADDR_SPACE) {
+      ErrCreator->addError(ERR_KERNEL_ARG_AS0, Ty, F->getName());
+    }
+  }
+
+  // the return type shall be void
+  if (!F->getReturnType()->isVoidTy()) {
+    ErrCreator->addError(
+      ERR_INVALID_KERNEL_RETURN_TYPE, F->getReturnType(), F->getName());
+  }
+}
+
+void VerifyGlobalVariable::execute(const GlobalVariable *GV) {
+  // Verify variable linkage
+  if (!isValidLinkageType(GV->getLinkage())) {
+    ErrCreator->addError(ERR_INVALID_LINKAGE_TYPE, GV->getName());
+  }
+
+  // check the global variable address space
+  switch (GV->getType()->getPointerAddressSpace()) {
+  case CONSTANT_ADDR_SPACE:
+    // constant address space: everything OK
+    break;
+  case LOCAL_ADDR_SPACE: {
+    // local address space:
+    // it is a function-scope variable,
+    // must contain a prefix that is equal to the name of a function
+    // and should be used only in it
+    for (Value::const_use_iterator ib = GV->use_begin(), ie = GV->use_end(); ib != ie; ++ib) {
+      if (const Instruction *Inst = dyn_cast<Instruction>(*ib)) {
+        const Function * func = Inst->getParent()->getParent();
+        if (!(GV->getName().startswith(func->getName().str() + "."))) {
+           ErrCreator->addError(ERR_INVALID_GLOBAL_AS3_VAR, GV);
+           break;
+        }
+      }
+    }
+    break;
+  }
+  default:
+    ErrCreator->addError(ERR_INVALID_GLOBAL_VAR_ADDRESS_SPACE, GV);
+    break;
   }
 }
 

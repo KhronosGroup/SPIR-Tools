@@ -20,6 +20,7 @@ class BasicBlock;
 class Function;
 class Module;
 class MDNode;
+class GlobalVariable;
 }
 
 using namespace llvm;
@@ -47,12 +48,17 @@ struct FunctionExecutor {
   virtual void execute(const Function*) = 0;
 };
 
+/// @brief Interface for executor on llvm global variables.
+struct GlobalVariableExecutor {
+  virtual void execute(const GlobalVariable*) = 0;
+};
+
 /// @brief Interface for executor on llvm module.
 struct ModuleExecutor {
   virtual void execute(const Module*) = 0;
 };
 
-/// @brief Interface for executor on llvm module.
+/// @brief Interface for executor on llvm metadata node.
 struct MDNodeExecutor {
   virtual void execute(const MDNode*) = 0;
 };
@@ -60,6 +66,7 @@ struct MDNodeExecutor {
 typedef std::list<ValueExecutor*> ValueExecutorList;
 typedef std::list<InstructionExecutor*> InstructionExecutorList;
 typedef std::list<FunctionExecutor*> FunctionExecutorList;
+typedef std::list<GlobalVariableExecutor*> GlobalVariableExecutorList;
 typedef std::list<ModuleExecutor*> ModuleExecutorList;
 typedef std::list<MDNodeExecutor*> MDNodeExecutorList;
 
@@ -102,12 +109,28 @@ private:
   BasicBlockIterator *m_bbi;
 };
 
+struct GlobalVariableIterator {
+  /// @hbrief Constructor.
+  /// @param GVEL list of global variable executors
+  GlobalVariableIterator(GlobalVariableExecutorList& GVEL) : m_gvel(GVEL) {
+  }
+
+  /// @brief Execute all the executors from the list on GlobalVariable.
+  /// @param GV Global variable to process.
+  void execute(const GlobalVariable& GV);
+
+private:
+  /// @brief List of GlobalVAriable executors.
+  GlobalVariableExecutorList& m_gvel;
+};
+
 struct ModuleIterator {
   /// @brief Constructor.
   /// @param MEL list of module executors.
   /// @param FI function iterator (optional).
-  ModuleIterator(ModuleExecutorList& MEL, FunctionIterator *FI = 0) :
-    m_mel(MEL), m_fi(FI) {
+  ModuleIterator(ModuleExecutorList& MEL, FunctionIterator *FI = 0,
+         GlobalVariableIterator *GI = 0) :
+    m_mel(MEL), m_fi(FI), m_gi(GI) {
   }
 
   /// @brief Iterates over the functions in a module.
@@ -119,6 +142,8 @@ private:
   ModuleExecutorList& m_mel;
   /// @brief Function iterator.
   FunctionIterator *m_fi;
+  /// @brief Global value iterator.
+  GlobalVariableIterator *m_gi;
 };
 
 /// @brief Iterates over the metadata nodes.
@@ -232,6 +257,39 @@ private:
   DataHolder *Data;
 };
 
+struct VerifyKernelPrototype : public FunctionExecutor {
+  /// @brief Constructor.
+  /// @param EH error holder.
+  /// @param D data holder.
+  VerifyKernelPrototype(ErrorCreator *EH, DataHolder *D) :
+    ErrCreator(EH), Data(D) {
+  }
+
+  /// @brief Verify that given OpenCL kernel has valid prototype.
+  /// @param F function to verify.
+  void execute(const Function *F);
+
+private:
+  ErrorCreator *ErrCreator;
+  DataHolder *Data;
+};
+
+struct VerifyGlobalVariable : public GlobalVariableExecutor {
+  /// @brief Constructor.
+  /// @param EH error holder.
+  /// @param D data holder.
+  VerifyGlobalVariable(ErrorCreator *EH, DataHolder *D) :
+    ErrCreator(EH), Data(D) {
+  }
+
+  /// @brief Verify varoius properties of given global variable
+  /// @param F function to verify.
+  void execute(const GlobalVariable *GV);
+
+private:
+  ErrorCreator *ErrCreator;
+  DataHolder *Data;
+};
 
 struct VerifyTripleAndDataLayout : public ModuleExecutor {
   /// @brief Constructor.

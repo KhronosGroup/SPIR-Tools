@@ -23,3 +23,5 @@ target_link_libraries(${TARGET_NAME}
   ${THREAD_LIB}
   )
 
+add_definitions(-DLLVM_VER_MAJOR=${LLVM_VERSION_MAJOR})
+add_definitions(-DLLVM_VER_MINOR=${LLVM_VERSION_MINOR})

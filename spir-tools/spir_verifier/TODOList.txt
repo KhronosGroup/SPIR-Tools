@@ -15,6 +15,11 @@ Function level verification
   - Function prototype
     - valid calling convention
     - valid return type
+    - LLVM Linkage type is valid type
+    - Added kernel prototype checker
+        1. Return type of a kernel has to be void
+        2. Pointer kernel arguments cannot refer to the private address space
+        3. Kernel arguments cannot be nested pointers - basic check only
 
 Module level verification:
   - valid triple
@@ -33,6 +38,7 @@ Module level verification:
     - cl_images optional core feature is present when using image data type
   - metadata KHR extensions - verify there is one valid entry or none
   - metadata compiler options - verify there is one valid entry or none
+  - valid global variables and valid global variables address space.
 
 
 // TODO //
@@ -56,7 +62,6 @@ Module level verification:
   - Preprocessor Directives
     - verify FP_CONTRACT is used at module level only
   - SPIR and LLVM IR
-    - LLVM Linkage type is valid type
     - Visibility Styles: validate "default" style is used
     - Parameter attributes: valid attributes are used
     - Function attributes
@@ -68,3 +73,5 @@ Module level verification:
     - disallow atomic memory ordering
     - follow LLVM aliasing rules
     - follow LLvM volatile memoy access rules for load, store and llvm.memcpy
+
+    - Kernel arguments cannot be nested pointers - should check structs that containt a pointer

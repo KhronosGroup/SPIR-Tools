@@ -23,3 +23,6 @@ add_llvm_library(${TARGET_NAME}
   ${HEADER_FILES}
   )
 
+
+add_definitions(-DLLVM_VER_MAJOR=${LLVM_VERSION_MAJOR})
+add_definitions(-DLLVM_VER_MINOR=${LLVM_VERSION_MINOR})
