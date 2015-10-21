@@ -86,7 +86,7 @@ TEST(MangleBasic, scalardouble) {
 
 TEST(MangleBasic, PtrType) {
   // fract_ret2ptr(float, __private float *, __private float *)
-  const char*const s = "_Z13fract_ret2ptrfPfPf";
+  const char*const s = "_Z13fract_ret2ptrfPfS0_";
   NameMangler nm(SPIR12);
   FunctionDescriptor fd;
   RefParamType F(new PrimitiveType(PRIMITIVE_FLOAT));
@@ -670,7 +670,7 @@ TEST(MangleTest, duplicateParam) {
   // "soa_cross3(float16, float16, float16, float16, float16,
   //             float16, float16*, float16*, float16*)"
   const char* s =
-    "_Z10soa_cross3Dv16_fDv16_fDv16_fDv16_fDv16_fDv16_fPDv16_fPDv16_fPDv16_f";
+    "_Z10soa_cross3Dv16_fDv16_fDv16_fDv16_fDv16_fDv16_fPDv16_fS0_S0_";
   NameMangler nm(SPIR12);
   FunctionDescriptor fd;
   RefParamType primitiveFloat(new PrimitiveType(PRIMITIVE_FLOAT));
@@ -747,6 +747,71 @@ TEST(MangleTest, addressSpaceAndUserDefTy) {
 
   fd.name = "myf";
   fd.parameters.push_back(userTypePtrRef);
+
+  std::string mangled;
+  MangleError err = nm.mangle(fd,mangled);
+  ASSERT_EQ(err, MANGLE_SUCCESS);
+  ASSERT_STREQ(s, mangled.c_str());
+}
+
+TEST(MangleTest, substitutionTest) {
+  // ndrange_t ndrange_2D (const size_t global_work_offset[2], const size_t global_work_size[2], const size_t local_work_size[2])
+  const char* s = "_Z10ndrange_2DPKiS0_S0_";
+
+  NameMangler nm(SPIR20);
+  FunctionDescriptor fd;
+  RefParamType intType(new PrimitiveType(PRIMITIVE_INT));
+  PointerType* intTypePtr(new PointerType(intType));
+  intTypePtr->setQualifier(ATTR_CONST, true);
+  RefParamType intTypePtrRef(intTypePtr);
+
+  fd.name = "ndrange_2D";
+  fd.parameters.push_back(intTypePtrRef);
+  fd.parameters.push_back(intTypePtrRef);
+  fd.parameters.push_back(intTypePtrRef);
+
+  std::string mangled;
+  MangleError err = nm.mangle(fd,mangled);
+  ASSERT_EQ(err, MANGLE_SUCCESS);
+  ASSERT_STREQ(s, mangled.c_str());
+}
+
+TEST(MangleTest, substitutionOrderTest) {
+  // void func (const size_t x[2], float *y, const size_t z[2], int w, float *a)
+  const char* s = "_Z4funcPKiPfS0_iS1_";
+
+  NameMangler nm(SPIR20);
+  FunctionDescriptor fd;
+  RefParamType intType(new PrimitiveType(PRIMITIVE_INT));
+  PointerType* intTypePtr(new PointerType(intType));
+  intTypePtr->setQualifier(ATTR_CONST, true);
+  RefParamType intTypePtrRef(intTypePtr);
+  RefParamType floatType(new PrimitiveType(PRIMITIVE_FLOAT));
+  PointerType* floatTypePtr(new PointerType(floatType));
+
+  fd.name = "func";
+  fd.parameters.push_back(intTypePtrRef);
+  fd.parameters.push_back(floatTypePtr);
+  fd.parameters.push_back(intTypePtrRef);
+  fd.parameters.push_back(intType);
+  fd.parameters.push_back(floatTypePtr);
+
+  std::string mangled;
+  MangleError err = nm.mangle(fd,mangled);
+  ASSERT_EQ(err, MANGLE_SUCCESS);
+  ASSERT_STREQ(s, mangled.c_str());
+}
+
+TEST(MangleBasic, userDefinedTypesSubstitution) {
+  // "myfunc(myTy1, myTy2)"
+  const char* s = "_Z6myfunc5myTy1S0_";
+  NameMangler nm(SPIR12);
+  FunctionDescriptor fd;
+  RefParamType userType1(new UserDefinedType("myTy1"));
+
+  fd.name = "myfunc";
+  fd.parameters.push_back(userType1);
+  fd.parameters.push_back(userType1);
 
   std::string mangled;
   MangleError err = nm.mangle(fd,mangled);
@@ -891,7 +956,6 @@ TEST(AttrOrderTest, removePtrQualifiers) {
   ASSERT_EQ(err, MANGLE_SUCCESS);
   ASSERT_STREQ(s, mangled.c_str());
 }
-
 
 }// End namespace test
 }// End namespace namemangling
